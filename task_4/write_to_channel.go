@@ -13,9 +13,15 @@ import (
 )
 
 func main() {
-	// Чтение количества воркеров из аргументов командной строки
-	nWorkers := *flag.Int("workers", 5, "Number of workers")
+	// Чтение количества воркеров из аргументов командной строки.
+	// Параметр должен предавать как -workers=n, где n - int > 0
+	nWorkers := flag.Int("workers", 5, "Number of workers")
 	flag.Parse()
+
+	if *nWorkers <= 0 {
+		fmt.Printf("Запуск программы имеет смысл только если количество воркеров больше 0. Завершаем работу т.к. переданное значение = %d\n", *nWorkers)
+		return
+	}
 
 	// Создание канала для передачи данных
 	ch := make(chan any)
@@ -51,11 +57,11 @@ func main() {
 	}()
 
 	// Запуск воркеров
-	work(nWorkers, ch, ctx, &wg)
+	work(*nWorkers, ch, ctx, &wg)
 
 	// Ожидание завершения всех воркеров
 	wg.Wait()
-	fmt.Println("Все воркеры завершены")
+	fmt.Println("Все воркеры ушли на пенсию")
 }
 
 // startWorker обрабатывает данные из канала и завершает работу при получении сигнала отмены контекста
@@ -63,7 +69,7 @@ func startWorker(ch chan any, ctx context.Context, wg *sync.WaitGroup, n int) {
 	defer wg.Done()
 
 	for {
-		time.Sleep(500 * time.Millisecond) // Симуляция работы воркера
+		time.Sleep(500 * time.Millisecond) // Задержка нужна, чтобы удобнее было вручную наблюдать за работой воркера
 		select {
 		case <-ctx.Done(): // Проверка на отмену контекста
 			fmt.Printf("Воркер %d ушел на пенсию\n", n)
