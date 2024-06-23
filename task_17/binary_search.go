@@ -3,7 +3,7 @@ package main
 import (
 	"cmp"
 	"fmt"
-	m "github.com/kasisaki/WB_internship/task_16"
+	utils "github.com/kasisaki/WB_internship/task_16/quicksort"
 )
 
 // Реализовать бинарный поиск встроенными методами языка.
@@ -47,7 +47,7 @@ func binarySearch[S cmp.Ordered](s []S, target S) (int, bool) {
 
 func main() {
 	a := []int{8, 3, -1, -2, -9, 3, 1, 4, 2, 1, 0, 10, 11, -1, -2}
-	m.Quicksort(a)
+	utils.Quicksort(a)
 	target := 2
 	idx, found := binarySearch(a, target)
 	fmt.Printf("In %v, target=%d, has index = %d, found: %v\n", a, target, idx, found)
