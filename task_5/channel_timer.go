@@ -22,7 +22,7 @@ func main() {
 
 	duration := time.Duration(*multiplier) * time.Second
 
-	// Создание канала  с типом данных int
+	// Создание канала с типом данных int
 	dataChannel := make(chan int)
 
 	// Таймер для завершения программы
