@@ -3,7 +3,7 @@ package main
 import (
 	"cmp"
 	"fmt"
-	utils "github.com/kasisaki/WB_internship/task_16/quicksort"
+	utils "github.com/kasisaki/WB_internship/L1/task_16/quicksort"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/kasisaki/WB_internship/task_19/line_reverse"
+	reverse "github.com/kasisaki/WB_internship/L1/task_19/line_reverse"
 	"os"
 	"strings"
 )
