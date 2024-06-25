@@ -79,16 +79,14 @@ func workerGlobalist(id int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		muGlobal.Lock()
-		val := stopGlobalist
-		muGlobal.Unlock()
-
-		if val {
+		if stopGlobalist {
 			fmt.Println("---------=---------")
-			fmt.Printf("WorkerGlobalist %d stopping as stopGlobalist is %v\n", id, val)
+			fmt.Printf("WorkerGlobalist %d stopping as stopGlobalist is %v\n", id, stopGlobalist)
 			fmt.Println("---------=---------")
+			muGlobal.Unlock()
 			return
 		}
-
+		muGlobal.Unlock()
 		fmt.Printf("WorkerGlobalist %d working\n", id)
 		time.Sleep(500 * time.Millisecond)
 	}
