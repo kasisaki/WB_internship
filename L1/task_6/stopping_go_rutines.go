@@ -1,206 +1,148 @@
 package main
 
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+)
+
 //перечисли все возможные способы остановки выполнения горутины.
-//
-//ChatGPT
-//В языке Go (Golang) для остановки выполнения горутин (goroutine) могут быть использованы несколько подходов. Вот основные из них:
-//
-//Использование канала (Channel):
-//
-//Закрытие канала: Если одна горутина закрывает канал, другая горутина может остановиться при получении сигнала о закрытии.
-//Передача значения в канал: Горутина может остановиться после получения специального сигнала (например, struct{}) через канал.
-//go
-//Copy code
-//done := make(chan struct{})
-//
-//go func() {
-//select {
-//case <-done:
-//// остановка горутины
-//return
-//}
-//}()
-//
-//// Остановка горутины
-//close(done)
-//Контекст (Context):
-//
-//Контекст в Go предоставляет возможность управлять временем жизни горутины через отмену (cancellation) и дедлайны (deadlines).
-//go
-//Copy code
-//ctx, cancel := context.WithCancel(context.Background())
-//
-//go func(ctx context.Context) {
-//select {
-//case <-ctx.Done():
-//// остановка горутины
-//return
-//}
-//}(ctx)
-//
-//// Остановка горутины
-//cancel()
-//Мьютексы и переменные состояния:
-//
-//Использование переменных, защищённых мьютексами, для контроля выполнения горутины.
-//go
-//Copy code
-//var mu sync.Mutex
-//var stop bool
-//
-//go func() {
-//for {
-//mu.Lock()
-//if stop {
-//mu.Unlock()
-//break
-//}
-//mu.Unlock()
-//// выполнение работы
-//}
-//}()
-//
-//// Остановка горутины
-//mu.Lock()
-//stop = true
-//mu.Unlock()
-//Таймеры и таймауты:
-//
-//Использование таймеров для ограничения времени выполнения горутины.
-//go
-//Copy code
-//done := make(chan struct{})
-//
-//go func() {
-//select {
-//case <-time.After(5 * time.Second):
-//// тайм-аут
-//return
-//case <-done:
-//// остановка горутины
-//return
-//}
-//}()
-//
-//// Остановка горутины
-//close(done)
-//Каждый из этих методов имеет свои преимущества и подходит для различных сценариев. Выбор метода зависит от конкретных требований задачи и структуры приложения.
-//
-//перечисли и другие, если есть
-//
-//ChatGPT
-//Кроме уже упомянутых методов, есть ещё несколько подходов к остановке горутин в Go, хотя они менее распространены. Вот дополнительные способы:
-//
-//Использование WaitGroup:
-//
-//Хотя sync.WaitGroup в основном используется для ожидания завершения горутин, он может быть косвенно использован для их остановки.
-//go
-//Copy code
-//var wg sync.WaitGroup
-//done := make(chan struct{})
-//
-//wg.Add(1)
-//go func() {
-//defer wg.Done()
-//for {
-//select {
-//case <-done:
-//return
-//default:
-//// выполнение работы
-//}
-//}
-//}()
-//
-//// Остановка горутины
-//close(done)
-//wg.Wait()
-//Использование атомарных переменных (Atomic Variables):
-//
-//Атомарные переменные могут использоваться для обеспечения безопасного доступа к флагу остановки.
-//go
-//Copy code
-//var stop int32
-//go func() {
-//for {
-//if atomic.LoadInt32(&stop) == 1 {
-//break
-//}
-//// выполнение работы
-//}
-//}()
-//
-//// Остановка горутины
-//atomic.StoreInt32(&stop, 1)
-//Использование функциональных замыканий (Closures):
-//
-//Передача функции остановки в горутину, которая замыкает переменные из внешнего контекста.
-//go
-//Copy code
-//stop := false
-//var mu sync.Mutex
-//
-//go func(stop *bool, mu *sync.Mutex) {
-//for {
-//mu.Lock()
-//if *stop {
-//mu.Unlock()
-//return
-//}
-//mu.Unlock()
-//// выполнение работы
-//}
-//}(&stop, &mu)
-//
-//// Остановка горутины
-//mu.Lock()
-//stop = true
-//mu.Unlock()
-//Использование сигнала ОС (OS Signals):
-//
-//Остановка горутин в ответ на сигналы операционной системы (например, SIGINT).
-//go
-//Copy code
-//c := make(chan os.Signal, 1)
-//signal.Notify(c, os.Interrupt)
-//
-//go func() {
-//<-c
-//// остановка горутины
-//}()
-//Паника (Panic) и восстановление (Recover):
-//
-//Использование механизма паники и восстановления, хотя это не рекомендуется для регулярного управления потоком выполнения.
-//go
-//Copy code
-//go func() {
-//defer func() {
-//if r := recover(); r != nil {
-//// обработка остановки горутины
-//}
-//}()
-//for {
-//// выполнение работы
-//}
-//}()
-//
-//// Остановка горутины
-//go func() {
-//panic("stop goroutine")
-//}()
-//Пакет context с дедлайном (Deadline):
-//
-//Контекст с дедлайном для автоматической остановки горутины по истечении времени.
-//go
-//Copy code
-//ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
-//defer cancel()
-//
-//go func(ctx context.Context) {
-//select {
-//case <-ctx.Done():
-//// остановка горутины
-//return
-//}
-//}(ctx)
-//Эти методы предоставляют дополнительные варианты остановки выполнения горутин в зависимости от конкретных потребностей и архитектуры вашего приложения.
+
+/*
+	Часто говорят, что таких способа 3, но:
+
+	1) завершение main функции и main горутины;
+
+	2) прослушивание всеми горутинами channel, при закрытии channel отправляется значение по умолчанию всем слушателям,
+		при получении сигнала все горутины делают return;
+
+	3) завязать все горутины на переданный в них context.
+
+	4) Возможно не самый оптимальный, но возможный --> рутина читает глобальную переменную и при определенном ее значении завершает свою работу
+
+	5) Я такое еще не видел и может выглядеть глупо, но можно реализовать завершение рутины при неудачной попытке заблокировать при помощи мютекса
+*/
+
+var stopGlobalist = false
+var muGlobal sync.Mutex
+
+func workerChan(id int, stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case <-stopCh:
+			fmt.Println("+++++++++=+++++++++")
+			fmt.Printf("WorkerChan %d stopping\n", id)
+			fmt.Println("+++++++++=+++++++++")
+			return
+		default:
+			fmt.Printf("WorkerChan %d working\n", id)
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+
+func workerCtx(id int, ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("---------=---------")
+			fmt.Printf("WorkerCtx %d stopping\n", id)
+			fmt.Println("---------=---------")
+			return
+		default:
+			fmt.Printf("WorkerCtx %d working\n", id)
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+
+func workerLocker(id int, mu *sync.Mutex, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		if mu.TryLock() {
+			mu.Unlock()
+			fmt.Printf("workerLocker %d acquired the lock and is working\n", id)
+			time.Sleep(500 * time.Millisecond) // Имитируем работу
+		} else {
+			fmt.Println("---------=---------")
+			fmt.Printf("workerLocker %d could not acquire the lock and is stopping\n", id)
+			fmt.Println("---------=---------")
+			return
+		}
+	}
+}
+
+func workerGlobalist(id int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		muGlobal.Lock()
+		val := stopGlobalist
+		muGlobal.Unlock()
+
+		if val {
+			fmt.Println("---------=---------")
+			fmt.Printf("WorkerGlobalist %d stopping as stopGlobalist is %v\n", id, val)
+			fmt.Println("---------=---------")
+			return
+		}
+
+		fmt.Printf("WorkerGlobalist %d working\n", id)
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+func main() {
+	var mu sync.Mutex
+	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	// Второй вариант
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go workerChan(i, stopCh, &wg)
+	}
+
+	//// третий вариант
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go workerCtx(i, ctx, &wg)
+	}
+
+	// четвертый вариант
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go workerGlobalist(i, &wg)
+	}
+
+	// пятый вариант
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go workerLocker(i, &mu, &wg)
+	}
+
+	time.Sleep(1 * time.Second)
+	close(stopCh)
+
+	time.Sleep(2 * time.Second)
+	cancel()
+
+	// дадим еще немного поработать воркерам с локом
+	time.Sleep(time.Second)
+
+	mu.Lock() // Завершим воркеры с локом
+	time.Sleep(2 * time.Second)
+	mu.Unlock()
+
+	muGlobal.Lock()
+	stopGlobalist = true // завершаем воркеры, которые читают глобальную переменную, мютекс для избежания гонки данных
+	muGlobal.Unlock()
+
+	// Wait a little to see the output from goroutines before main exits
+	fmt.Println("----Waiting All workers to stop----")
+	wg.Wait()
+	fmt.Println("All workers stopped")
+}
